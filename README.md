@@ -1,0 +1,1 @@
+The known cards is calucated by : total number - unseen cards

@@ -1,0 +1,18 @@
+<div class="example">
+			<div class="example-figure">
+				<circle-progress class="progress" max="100" value="70" text-format="percent"></circle-progress>
+			</div>
+			<style>
+				circle-progress::part(value) {
+					stroke-width: 6px;
+					stroke: hsl(125, 84%, 22%);
+				}
+				circle-progress::part(circle) {
+					stroke-width: 6px;
+					stroke: hsl(96, 45%, 72%);
+				}
+				circle-progress::part(text) {
+					fill: hsl(197, 3%, 42%);
+				}
+			</style>
+		</div>
