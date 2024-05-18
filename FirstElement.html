@@ -1,0 +1,34 @@
+
+<div class="element">
+            <div class="elementrow">
+                <div class="textdata">
+                    <h3 class="decktitle">DECKTITLE</h3>
+                    <p class="remainingtime">REMAINING jours restants</p>
+                </div>
+                <div class="progress-bar"><div class="example">
+                    <div class="example-figure">
+                        <circle-progress class="progress" max="100" value="POURCENTAGEVALUE" text-format="percent"></circle-progress>
+                    </div>
+                    <style>
+                        circle-progress::part(base) {
+                            width: auto;
+                            height: 80px;
+                        }
+                        circle-progress::part(value) {
+                            stroke-width: 6px;
+                            stroke: hsl(125, 84%, 22%);
+                            color: rgb(88, 115, 138) ;
+                        }
+                        circle-progress::part(circle) {
+                            stroke-width: 6px;
+                            stroke: hsl(96, 45%, 72%);
+                        }
+                        circle-progress::part(text) {
+                            fill: hsl(197, 3%, 42%);
+                        }
+                    </style>
+                    </div>
+                </div>
+            </div>
+
+        </div>
