@@ -1,12 +1,1 @@
-{
-  "tasks": [
-    "Culture g::Ultimate Geography",
-    "Perso::Table de rappel",
-    "Anglais::3000 mots les plus courants"
-  ],
-  "completed": [
-    "Culture g::Ultimate Geography",
-    "Perso::Table de rappel",
-    "Anglais::3000 mots les plus courants"
-  ]
-}
+{"tasks": {"Culture g::Ultimate Geography": "Ultimate Geography"}, "config": {"pauseConfig": "Pause"}}

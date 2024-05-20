@@ -1,4 +1,5 @@
 import json
+import math
 import pprint
 import time
 
@@ -15,7 +16,7 @@ import sys
 # sys.path show a list of path, the first element of this list is the addons folder
 #print(sys.path)
 path = sys.path[0]
-sys.path.append(path+"/todo/")
+sys.path.append(path + "/todo/")
 #print(sys.path)
 
 
@@ -39,7 +40,9 @@ class Todo:
         return collection
 
     def get_deck_names(self):
-        names_list = self.window().col.decks.all_names()
+        names_list = []
+        for e in self.window().col.decks.all_names_and_ids():
+            names_list.append(e.name)
         #print(names_list)
         return names_list
 
@@ -102,10 +105,10 @@ class Todo:
     def get_addon_path(self):
         return mw.addonManager.addonsFolder("todo")
 
-    def add_new_deck_to_task(self, deck):
+    def add_new_deck_to_task(self, deck, config):
         with open(f"{self.get_addon_path()}/task.json") as f:
             tasks_json = json.load(f)
-        tasks_json["tasks"].append(deck)
+        tasks_json["tasks"][deck] = config
         with open(f"{self.get_addon_path()}/task.json", "w") as f:
             json.dump(tasks_json, f)
 
@@ -121,7 +124,8 @@ class Todo:
     def get_all_task(self) -> list:
         with open(f"{self.get_addon_path()}/task.json") as f:
             tasks_json = json.load(f)
-        return tasks_json["tasks"]
+        return list(tasks_json["tasks"].keys())
+        #return tasks_json["tasks"]
 
     def get_all_completed(self) -> list:
         completed_list = []
@@ -131,12 +135,57 @@ class Todo:
                 completed_list.append(key)
 
         return completed_list
+
+    def getDeckConfig(self, deck):
+        if deck not in self.get_deck_names():
+            return False
+        collection = self.collection()
+        did = collection.decks.id(deck)
+        return collection.decks.config_dict_for_deck_id(did)
+
+    def getAllDeckConfig(self):
+        decks = self.get_deck_names()
+        configs = []
+        for e in decks:
+            configs.append(self.getDeckConfig(e))
+
+        # removing duplicates
+        return list(set(configs))
+
+    def removeTask(self, task):
+        with open(f"{self.get_addon_path()}/task.json") as f:
+            tasks_json = json.load(f)
+        try :
+            del tasks_json["tasks"][task]
+            with open(f"{self.get_addon_path()}/task.json", "w") as f:
+                json.dump(tasks_json, f)
+        except Exception as error:
+            print("Error removing task", error)
+    def getAllDeckConfigNames(self):
+        decks = self.get_deck_names()
+        configs = []
+        for e in decks:
+            configs.append(self.getDeckConfig(e)["name"])
+
+        # removing duplicates
+        return list(set(configs))
+
+    def setPauseConfig(self, config):
+        with open(f"{self.get_addon_path()}/task.json") as f:
+            tasks_json = json.load(f)
+        tasks_json["config"]["pauseConfig"] = config
+        with open(f"{self.get_addon_path()}/task.json", "w") as f:
+            json.dump(tasks_json, f)
+    def remaining_days(self, deck, number_of_unseen_cards):
+        deck_config = self.getDeckConfig(deck)
+        new_cards = int(deck_config["new"]["perDay"])
+        return math.ceil(number_of_unseen_cards / new_cards)
+
     def render_tasks(self, deck_list):
         completed = self.get_all_completed()
-        if isinstance(deck_list[0], list) :
-            finals_HTML =[]
+        if isinstance(deck_list[0], list):
+            finals_HTML = []
             for deck_element in deck_list:
-                print(deck_element)
                 tasks = deck_element
 
                 stats = self.get_deck_stats(self.get_deck_names())  # self.get_deck_names())
@@ -164,18 +213,19 @@ class Todo:
                     if e in completed:
                         pourcentage = 100
                     # Get deck progression
-                    else: pourcentage = round(
-                        (element_stats["total"] - element_stats["unseen"]) / element_stats["total"] * 100,
-                        1)
+                    else:
+                        pourcentage = round(
+                            (element_stats["total"] - element_stats["unseen"]) / element_stats["total"] * 100,
+                            1)
 
                     element_html = base_element
                     element_html = element_html.replace("DECKTITLE", self.collection().decks.basename(e))
-                    element_html = element_html.replace("REMAINING", "soon")
+                    element_html = element_html.replace("REMAINING", self.remaining_days(e, element_stats["unseen"]))
                     element_html = element_html.replace("POURCENTAGEVALUE", f"{pourcentage}")
 
                     if tasks.index(e) == 0:
                         element_html = element_html.replace('class="example"', 'class="firstelementprogressbar"')
-                    print(element_html)
+
                     final_HTML += element_html
 
                 # Add style
@@ -190,15 +240,14 @@ class Todo:
 
                 finals_HTML.append(final_HTML)
 
-                with open(f"{self.get_addon_path()}/{deck_element[0]}.html", "w") as f:
-                    f.write(final_HTML)
+
 
             return finals_HTML
         else:
 
             tasks = deck_list
 
-            stats = self.get_deck_stats(self.get_deck_names())#self.get_deck_names())
+            stats = self.get_deck_stats(self.get_deck_names())  #self.get_deck_names())
             final_HTML = """"""
 
             # add progress bar library
@@ -232,14 +281,13 @@ class Todo:
 
                 element_html = base_element
                 element_html = element_html.replace("DECKTITLE", self.collection().decks.basename(e))
-                element_html = element_html.replace("REMAINING", "soon")
+                element_html = element_html.replace("REMAINING", str(self.remaining_days(e, element_stats["unseen"])))
                 element_html = element_html.replace("POURCENTAGEVALUE", f"{pourcentage}")
 
                 if tasks.index(e) == 0:
                     element_html = element_html.replace('class="example"', 'class="firstelementprogressbar"')
 
                 final_HTML += element_html
-
 
             # Add style
             with open(f"{self.get_addon_path()}/style.html") as f:
@@ -256,17 +304,21 @@ class Todo:
 
 todo = Todo()
 
-def show_to_do_window ():
-    mw.toDoWindows = toDoWindows = ToDoQtWindows(todo)
-    print("windows")
+
+def show_to_do_window():
+    mw.toDoWindows = toDoWindows = ToDoQtWindows(todo, mw)
     toDoWindows.show()
+
+
 def on_webview_will_set_content(web_content, context):
     # Vérifier si le contexte est la page d'accueil
     body = web_content.body
     splited = body.split("<center>")
-        # Ajouter du HTML personnalisé avant la balise de fermeture </body>
+    # Ajouter du HTML personnalisé avant la balise de fermeture </body>
     if len(splited) > 1:
-        web_content.body = body.split("<center>")[0] + "<center>" + todo.render_tasks(todo.get_all_task()) + body.split("<center>")[1]
+        web_content.body = body.split("<center>")[0] + "<center>" + todo.render_tasks(todo.get_all_task()) + \
+                           body.split("<center>")[1]
+
 
 def register_webview():
     gui_hooks.webview_will_set_content.append(on_webview_will_set_content)
@@ -275,9 +327,6 @@ def register_webview():
 
 gui_hooks.main_window_did_init.append(register_webview)
 
-
-
-
 # create a new menu item, "test"
 action = QAction("Todo", mw)
 # set it to call testFunction when it's clicked
@@ -285,9 +334,3 @@ qconnect(action.triggered, show_to_do_window)
 # and add it to the tools menu
 
 mw.form.menuTools.addAction(action)
-
-
-
-
-
-
