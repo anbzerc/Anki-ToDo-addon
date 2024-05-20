@@ -70,15 +70,22 @@ class ToDoQtWindows(QWidget):
         todo_completed_html = str(html_list[1])
         # Remove absolute position statements
         todo_completed_html = todo_completed_html.replace("position: absolute;", "")
+        # Change height and width
         todo_completed_html = todo_completed_html.replace("""height: 385.06px;
                             width: 400px;""", """height: 100%;
                             width: 100%;""")
-        todo_completed_html = todo_completed_html.replace("""top: 225px;
-                              left: 15%;
-                              transform: translate(-50%, -50%);""", """display: flex;
-                              justify-content: center;
-                              align-items: center;
-                              """)
+        todo_completed_html = todo_completed_html.replace("transform: translate(-50%, -50%);", "")
+        todo_completed_html = todo_completed_html.replace("height: 385.06px;", "height: 100%;")
+        todo_completed_html = todo_completed_html.replace("width: 400px;", "width: 100%;")
+        todo_completed_html = todo_completed_html.replace(""".example{
+                visibility: hidden;""", """.example{""")
+        # Hide remaining time
+        todo_completed_html = todo_completed_html.replace(""".remainingtime {
+            font: 0.95rem "Fira Sans", sans-serif;
+            margin: 15px;
+            margin-top: 8px;
+            margin-left: 25px;
+            }""", ".remainingtime {display: none;}")
         todo_completed_html = todo_completed_html.replace("""border: solid rgb(189, 199, 207)""", "")
         self.completed_web_view.setHtml(todo_completed_html)
 
