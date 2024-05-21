@@ -6,6 +6,7 @@ import time
 import anki.collection
 import aqt.overview
 from aqt import *
+from aqt.operations import QueryOp
 from aqt.utils import showInfo, showText
 from aqt.webview import WebContent
 
@@ -21,14 +22,12 @@ platform = sys.platform
 if "win" in platform:
     sys.path.append(path + "\\Anki-ToDo\\")
 else:
-    sys.path.append(path + "/todo/")
+    sys.path.append(path + "/Anki-ToDo/")
     print(sys.path)
-
 
 from ToDoQtWindows import ToDoQtWindows
 
 anki_version = tuple(int(segment) for segment in aqt.appVersion.split("."))
-
 
 
 class Todo:
@@ -37,7 +36,7 @@ class Todo:
     def window(self):
         return aqt.mw
 
-    #Get user's collection
+    # Get user's collection
     def collection(self):
         collection = self.window().col
         if collection is None:
@@ -50,12 +49,12 @@ class Todo:
             return self.get_addon_path() + f"\\{name}"
         else:
             return self.get_addon_path() + f"/{name}"
-        
+
     def get_deck_names(self):
         names_list = []
         for e in self.window().col.decks.all_names_and_ids():
             names_list.append(e.name)
-        #print(names_list)
+        # print(names_list)
         return names_list
 
     def scheduler(self):
@@ -71,39 +70,42 @@ class Todo:
                 allNodes[deckId] = childNode
         return allNodes
 
-    def deckStatsToJson(self, due_tree, collection: Collection):
-        name = due_tree.name
-        if "::" in name:
-            total_card_number = len(collection.find_cards(f'"deck:{name}"'))
-            unseen_card_number = len(collection.find_cards(f'"deck:{name}" is:new'))
-            card_in_learning = len(collection.find_cards(f'"deck:{name}" is:learn'))
-            suspended_cards = len(collection.find_cards(f'"deck:{name}" is:suspended'))
-            known_cards = total_card_number - unseen_card_number
-            deckStats = {'deck_id': due_tree.deck_id,
-                         'name': due_tree.name,
-                         'total': total_card_number,
-                         'unseen': unseen_card_number,
-                         'inlearning': card_in_learning,
-                         'suspended': suspended_cards,
-                         'known': known_cards
-                         }
-        else:
-            total_card_number = len(collection.find_cards(f'deck:{name}'))
-            unseen_card_number = len(collection.find_cards(f'deck:{name} is:new'))
-            card_in_learning = len(collection.find_cards(f'deck:{name} is:learn'))
-            suspended_cards = len(collection.find_cards(f'deck:{name} is:suspended'))
-            known_cards = total_card_number - unseen_card_number
-            deckStats = {'deck_id': due_tree.deck_id,
-                         'name': due_tree.name,
-                         'total': total_card_number,
-                         'unseen': unseen_card_number,
-                         'inlearning': card_in_learning,
-                         'suspended': suspended_cards,
-                         'known': known_cards
-                         }
+    def deckStatsToJson(self, due_tree):
+        name = self.collection().decks.name(due_tree.deck_id)
+        total_card_number = len(self.collection().find_cards(f'"deck:{name}"'))
+        unseen_card_number = len(self.collection().find_cards(f'"deck:{name}" is:new'))
+        card_in_learning = len(self.collection().find_cards(f'"deck:{name}" is:learn'))
+        suspended_cards = len(self.collection().find_cards(f'"deck:{name}" is:suspended'))
+        known_cards = total_card_number - unseen_card_number
+        deckStats = {'deck_id': due_tree.deck_id,
+                     'name': due_tree.name,
+                     'total': total_card_number,
+                     'unseen': unseen_card_number,
+                     'inlearning': card_in_learning,
+                     'suspended': suspended_cards,
+                     'known': known_cards
+                     }
+
         return deckStats
 
-    def get_deck_stats(self, decks):
+    def deckStatsToJsonByName(self, name):
+        total_card_number = len(self.collection().find_cards(f'"deck:{name}"'))
+        unseen_card_number = len(self.collection().find_cards(f'"deck:{name}" is:new'))
+        card_in_learning = len(self.collection().find_cards(f'"deck:{name}" is:learn'))
+        suspended_cards = len(self.collection().find_cards(f'"deck:{name}" is:suspended'))
+        known_cards = total_card_number - unseen_card_number
+        deckStats = {'deck_id': self.collection().decks.id(name),
+                     'name': name,
+                     'total': total_card_number,
+                     'unseen': unseen_card_number,
+                     'inlearning': card_in_learning,
+                     'suspended': suspended_cards,
+                     'known': known_cards
+                     }
+
+        return deckStats
+
+    def get_deck_stats(self, decks:list):
         collection = self.collection()
         scheduler = self.scheduler()
         responseDict = {}
@@ -111,7 +113,7 @@ class Todo:
         allDeckNodes = self.collectDeckTreeChildren(scheduler.deck_due_tree())
         for deckId, deckNode in allDeckNodes.items():
             if deckId in deckIds:
-                responseDict[collection.decks.name(deckId)] = self.deckStatsToJson(deckNode, collection)
+                responseDict[collection.decks.name(deckId)] = self.deckStatsToJson(deckNode)
         return responseDict
 
     def get_addon_path(self):
@@ -136,7 +138,7 @@ class Todo:
         with open(self.get_path("task.json")) as f:
             tasks_json = json.load(f)
         return list(tasks_json["tasks"].keys())
-        #return tasks_json["tasks"]
+        # return tasks_json["tasks"]
 
     def get_all_completed(self) -> list:
         completed_list = []
@@ -166,12 +168,13 @@ class Todo:
     def removeTask(self, task):
         with open(self.get_path("task.json")) as f:
             tasks_json = json.load(f)
-        try :
+        try:
             del tasks_json["tasks"][task]
             with open(self.get_path("task.json", "w")) as f:
                 json.dump(tasks_json, f)
         except Exception as error:
             print("Error removing task", error)
+
     def getAllDeckConfigNames(self):
         decks = self.get_deck_names()
         configs = []
@@ -187,6 +190,7 @@ class Todo:
         tasks_json["config"]["pauseConfig"] = config
         with open(self.get_path("task.json", "w")) as f:
             json.dump(tasks_json, f)
+
     def remaining_days(self, deck, number_of_unseen_cards):
         deck_config = self.getDeckConfig(deck)
         new_cards = int(deck_config["new"]["perDay"])
@@ -194,16 +198,32 @@ class Todo:
             return 0
         return math.ceil(number_of_unseen_cards / new_cards)
 
-    def checkIfTaskDone(self):
+    def checkIfTaskDone(self) -> str:
         tasks = self.get_all_task()
         for e in tasks:
-            stat = self.get_deck_stats(e)
+            stat = self.deckStatsToJsonByName(e)
             print(e, stat)
             # If deck is done, remove it from task list
             if stat["unseen"] == 0:
-                self.move_deck_to_completed(e)
+               print("finished", e)
+               self.move_deck_to_completed(e)
+               return e
 
+    def runBackgroundCheck(self):
+        op = QueryOp(
+            # the active window (main window in this case)
+            parent=mw,
+            # the operation is passed the collection for convenience; you can
+            # ignore it if you wish
+            op=lambda col: self.checkIfTaskDone,
+            success=self.successfully_moved_deck(),
+        )
+        # if with_progress() is not called, no progress window will be shown.
+        # note: QueryOp.with_progress() was broken until Anki 2.1.50
+        op.run_in_background()
 
+    def successfully_moved_deck(deck) -> None:
+        showInfo(f"Congratulation ! You'd learnt all cards in {deck}")
     def render_tasks(self, deck_list):
         completed = self.get_all_completed()
         if isinstance(deck_list[0], list):
@@ -243,7 +263,8 @@ class Todo:
 
                     element_html = base_element
                     element_html = element_html.replace("DECKTITLE", self.collection().decks.basename(e))
-                    element_html = element_html.replace("REMAINING", str(self.remaining_days(e, element_stats["unseen"])))
+                    element_html = element_html.replace("REMAINING",
+                                                        str(self.remaining_days(e, element_stats["unseen"])))
                     element_html = element_html.replace("POURCENTAGEVALUE", f"{pourcentage}")
 
                     if tasks.index(e) == 0:
@@ -263,14 +284,12 @@ class Todo:
 
                 finals_HTML.append(final_HTML)
 
-
-
             return finals_HTML
         else:
 
             tasks = deck_list
 
-            stats = self.get_deck_stats(self.get_deck_names())  #self.get_deck_names())
+            stats = self.get_deck_stats(self.get_deck_names())  # self.get_deck_names())
             final_HTML = """"""
 
             # add progress bar library
@@ -292,7 +311,6 @@ class Todo:
                 element_stats = stats[e]
                 # Todo estimation jours restants avec config du deck
                 # check element is the first task because it's different html
-
                 # Get deck progression
                 if e in completed:
                     pourcentage = 100
@@ -344,14 +362,15 @@ def on_webview_will_set_content(web_content, context):
 
 
 def register_webview():
+    # Save collection to prevent problems
+    todo.collection().save()
     gui_hooks.webview_will_set_content.append(on_webview_will_set_content)
     # Add deck progression check to operation_did_execute hook
-    gui_hooks.operation_did_execute.append(todo.checkIfTaskDone())
-    #show_to_do_window()
+    gui_hooks.operation_did_execute.append(todo.runBackgroundCheck())
+    # show_to_do_window()
 
 
 gui_hooks.main_window_did_init.append(register_webview)
-
 
 # create a new menu item, "test"
 action = QAction("Todo", mw)
