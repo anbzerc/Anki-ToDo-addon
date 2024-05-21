@@ -72,7 +72,7 @@ class Todo:
         return allNodes
 
     def deckStatsToJson(self, due_tree, collection: Collection):
-        name = self.collection().decks.name(due_tree.deck_id)
+        name = due_tree.name
         if "::" in name:
             total_card_number = len(collection.find_cards(f'"deck:{name}"'))
             unseen_card_number = len(collection.find_cards(f'"deck:{name}" is:new'))
@@ -198,9 +198,9 @@ class Todo:
         tasks = self.get_all_task()
         for e in tasks:
             stat = self.get_deck_stats(e)
-            print(stat)
+            print(e, stat)
             # If deck is done, remove it from task list
-            if stat[self.collection().decks.id(e)]["unseen"] == 0:
+            if stat["unseen"] == 0:
                 self.move_deck_to_completed(e)
 
 
