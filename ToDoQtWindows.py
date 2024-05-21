@@ -21,7 +21,7 @@ class ToDoQtWindows(QWidget):
         main_button_layout.setSpacing(10)  # Set a 10px spacing between buttons
         self.stacklayout = QStackedLayout()
 
-        btn_size = (120, 25)  # Set a fixed size for buttons (adjusted height)
+        btn_size = (130, 25)  # Set a fixed size for buttons (adjusted height)
 
         # Render htmls:
         html_list = todo.render_tasks([todo.get_all_task(), todo.get_all_completed()])
@@ -147,7 +147,7 @@ class ToDoQtWindows(QWidget):
 
         # Tab 4
         # Add the "Add Task" tab
-        self.btn_add_task = QPushButton("Manage Tasks")
+        self.btn_add_task = QPushButton("Manage tasks")
         self.btn_add_task.setFixedSize(*btn_size)  # Apply the fixed size
         self.btn_add_task.pressed.connect(self.activate_tab_4)
         main_button_layout.addWidget(self.btn_add_task)
