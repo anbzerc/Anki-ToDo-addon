@@ -21,9 +21,9 @@ path = sys.path[0]
 platform = sys.platform
 # Check if platform is window
 if "win" in platform:
-    sys.path.append(path + "\\Anki-ToDo\\")
+    sys.path.append(path + "\\1807500231\\")
 else:
-    sys.path.append(path + "/Anki-ToDo/")
+    sys.path.append(path + "/1807500231/")
     print(sys.path)
 
 from ToDoQtWindows import ToDoQtWindows
@@ -118,7 +118,7 @@ class Todo:
         return responseDict
 
     def get_addon_path(self):
-        return mw.addonManager.addonsFolder("Anki-ToDo")
+        return mw.addonManager.addonsFolder("1807500231")
 
     def add_new_deck_to_task(self, deck, config):
         # Add to json
