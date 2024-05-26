@@ -41,3 +41,6 @@ Pour supprimer une tâche, sélectionnez ladite tâche et appuyez sur le bouton 
 ### Contribuer :
 
 N'hésitez pas à faire des pull request. Je suis disponible si besoin de précision et pour discuter des améliorations
+
+#### Remerciement :
+Merci à toute l'equipe anki pour ce super logiciel et merci à FooSoft (https://github.com/FooSoft) et son plugin ankiconnect dont certains bouts de code on étés très utiles.
