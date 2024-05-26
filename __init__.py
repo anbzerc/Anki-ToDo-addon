@@ -122,11 +122,11 @@ class Todo:
 
     def add_new_deck_to_task(self, deck, config):
         # Add to json
-        with open(self.get_path("task.json")) as f:
+        with open(self.get_path("user_files/task.json")) as f:
             tasks_json = json.load(f)
             pause_id = int(tasks_json["config"]["pauseConfigId"])
         tasks_json["tasks"][deck] = config
-        with open(self.get_path("task.json"), "w") as f:
+        with open(self.get_path("user_files/task.json"), "w") as f:
             json.dump(tasks_json, f)
 
         # Check that the deck isn't the only one in tasks
@@ -135,15 +135,15 @@ class Todo:
             self.setDeckConfigId([deck], pause_id)
 
     def move_deck_to_completed(self, deck):
-        with open(self.get_path("task.json")) as f:
+        with open(self.get_path("user_files/task.json")) as f:
             tasks_json = json.load(f)
         if deck in list(tasks_json["tasks"].keys()):
             del tasks_json["tasks"][deck]
-        with open(self.get_path("task.json"), "w") as f:
+        with open(self.get_path("user_files/task.json"), "w") as f:
             json.dump(tasks_json, f)
 
     def get_all_task(self) -> list:
-        with open(self.get_path("task.json")) as f:
+        with open(self.get_path("user_files/task.json")) as f:
             tasks_json = json.load(f)
         return list(tasks_json["tasks"].keys())
         # return tasks_json["tasks"]
@@ -174,11 +174,11 @@ class Todo:
         return list(set(configs))
 
     def removeTask(self, task):
-        with open(self.get_path("task.json")) as f:
+        with open(self.get_path("user_files/task.json")) as f:
             tasks_json = json.load(f)
         try:
             del tasks_json["tasks"][task]
-            with open(self.get_path("task.json"), "w") as f:
+            with open(self.get_path("user_files/task.json"), "w") as f:
                 json.dump(tasks_json, f)
         except Exception as error:
             print("Error removing task", error)
@@ -192,15 +192,15 @@ class Todo:
         return configs
 
     def setPauseConfig(self, config, cid):
-        with open(self.get_path("task.json")) as f:
+        with open(self.get_path("user_files/task.json")) as f:
             tasks_json = json.load(f)
         tasks_json["config"]["pauseConfig"] = config
         tasks_json["config"]["pauseConfigId"] = cid
-        with open(self.get_path("task.json"), "w") as f:
+        with open(self.get_path("user_files/task.json"), "w") as f:
             json.dump(tasks_json, f)
 
     def remaining_days(self, deck, number_of_unseen_cards):
-        with open(self.get_path("task.json")) as f:
+        with open(self.get_path("user_files/task.json")) as f:
             tasks_json = json.load(f)
         if deck in tasks_json["tasks"]:
             deck_config_id = tasks_json["tasks"][deck]
@@ -225,7 +225,7 @@ class Todo:
                 print(f"len {len(tasks)} index {deck_index+1}")
                 # Check that deck isn't the last in tasks
                 if len(tasks) > deck_index + 1:
-                    with open(self.get_path("task.json")) as f:
+                    with open(self.get_path("user_files/task.json")) as f:
                         config = json.load(f)
                         did = int(config["tasks"][tasks[deck_index+1]])
                     self.setDeckConfigId([tasks[deck_index+1]], did)
