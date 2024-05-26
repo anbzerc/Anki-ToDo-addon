@@ -117,9 +117,11 @@ class ToDoQtWindows(QWidget):
         self.pause_deck_config_dropdown.setFixedWidth(300)  # Set fixed width
 
         # Get all configs than add each to the list
-        configs = todo.getAllDeckConfigNames()
-        for e in configs:
+        configs_dict = dict(todo.getAllDeckConfigNames())
+        print(type(configs_dict))
+        for e, _ in configs_dict.items():
             self.pause_deck_config_dropdown.addItem(e)
+        print(type(configs_dict))
 
         pause_deck_config_dropdown_layout.addWidget(self.pause_deck_config_dropdown)
         settings_widget_layout.addWidget(pause_deck_config_dropdown_container)
@@ -134,7 +136,8 @@ class ToDoQtWindows(QWidget):
         self.add_deck_button.setFixedWidth(300)  # Set fixed width
         add_deck_button_layout.addWidget(self.add_deck_button)
         settings_widget_layout.addWidget(add_deck_button_container)
-        self.add_deck_button.pressed.connect(lambda: todo.setPauseConfig(self.pause_deck_config_dropdown.currentText()))
+        self.add_deck_button.pressed.connect(lambda: self.set_config(todo, configs_dict)
+        )
 
         # Add another spacer to center elements vertically
         settings_widget_layout.addSpacerItem(
@@ -191,8 +194,8 @@ class ToDoQtWindows(QWidget):
         self.future_config_dropdown.setFixedWidth(300)  # Set fixed width
 
         # Get all configs than add each to the list
-        configs = todo.getAllDeckConfigNames()
-        for e in configs:
+        configs_dict = todo.getAllDeckConfigNames()
+        for e, _ in configs_dict.items():
             self.future_config_dropdown.addItem(e)
 
         future_config_dropdown_layout.addWidget(self.future_config_dropdown)
@@ -208,7 +211,7 @@ class ToDoQtWindows(QWidget):
         self.add_deck_button.setFixedWidth(300)  # Set fixed width
         add_deck_button_layout.addWidget(self.add_deck_button)
         add_task_layout.addWidget(add_deck_button_container)
-        self.add_deck_button.pressed.connect(lambda: self.add_deck_button_pressed(todo))
+        self.add_deck_button.pressed.connect(lambda: self.add_deck_button_pressed(todo, configs_dict))
 
         add_task_layout.addSpacing(20)
 
@@ -286,10 +289,11 @@ class ToDoQtWindows(QWidget):
     def activate_tab_4(self):
         self.stacklayout.setCurrentIndex(3)
 
-    def add_deck_button_pressed(self, todo):
+    def add_deck_button_pressed(self, todo, configs_dict):
         # fetch current texts
         selected_deck = self.deck_dropdown.currentText()
-        selected_config = self.future_config_dropdown.currentText()
+        # Config id
+        selected_config = configs_dict[self.future_config_dropdown.currentText()]
 
         todo.add_new_deck_to_task(selected_deck, selected_config)
         self.mw.reset()
@@ -297,6 +301,12 @@ class ToDoQtWindows(QWidget):
     def remove_task_button_pressed(self, todo):
         todo.removeTask(self.remove_task_dropdown.currentText())
         self.mw.reset()
+
+    def set_config(self, todo, config_dict):
+        todo.setPauseConfig(
+            self.pause_deck_config_dropdown.currentText(),
+            config_dict[self.pause_deck_config_dropdown.currentText()]
+        )
 
 # Uncomment the lines below to run the application
 # app = QApplication(sys.argv)

@@ -1,3 +1,4 @@
+import functools
 import json
 import math
 import pprint
@@ -105,7 +106,7 @@ class Todo:
 
         return deckStats
 
-    def get_deck_stats(self, decks:list):
+    def get_deck_stats(self, decks: list):
         collection = self.collection()
         scheduler = self.scheduler()
         responseDict = {}
@@ -120,18 +121,25 @@ class Todo:
         return mw.addonManager.addonsFolder("Anki-ToDo")
 
     def add_new_deck_to_task(self, deck, config):
+        # Add to json
         with open(self.get_path("task.json")) as f:
             tasks_json = json.load(f)
+            pause_id = int(tasks_json["config"]["pauseConfigId"])
         tasks_json["tasks"][deck] = config
-        with open(self.get_path("task.json", "w")) as f:
+        with open(self.get_path("task.json"), "w") as f:
             json.dump(tasks_json, f)
+
+        # Check that the deck isn't the only one in tasks
+        if len(tasks_json["tasks"]) > 1:
+            # Set pause config
+            self.setDeckConfigId([deck], pause_id)
 
     def move_deck_to_completed(self, deck):
         with open(self.get_path("task.json")) as f:
             tasks_json = json.load(f)
         if deck in list(tasks_json["tasks"].keys()):
             del tasks_json["tasks"][deck]
-        with open(self.get_path("task.json", "w")) as f:
+        with open(self.get_path("task.json"), "w") as f:
             json.dump(tasks_json, f)
 
     def get_all_task(self) -> list:
@@ -144,7 +152,7 @@ class Todo:
         completed_list = []
         decks_stats = self.get_deck_stats(self.get_deck_names())
         for key, value in decks_stats.items():
-            if value["total"] - value["unseen"] == 0:
+            if value["unseen"] == 0:
                 completed_list.append(key)
 
         return completed_list
@@ -170,29 +178,35 @@ class Todo:
             tasks_json = json.load(f)
         try:
             del tasks_json["tasks"][task]
-            with open(self.get_path("task.json", "w")) as f:
+            with open(self.get_path("task.json"), "w") as f:
                 json.dump(tasks_json, f)
         except Exception as error:
             print("Error removing task", error)
 
-    def getAllDeckConfigNames(self):
+    def getAllDeckConfigNames(self) -> dict:
         decks = self.get_deck_names()
-        configs = []
+        configs = {}
         for e in decks:
-            configs.append(self.getDeckConfig(e)["name"])
-
+            configs[self.getDeckConfig(e)["name"]] = self.getDeckConfig(e)["id"]
         # removing duplicates
-        return list(set(configs))
+        return configs
 
-    def setPauseConfig(self, config):
+    def setPauseConfig(self, config, cid):
         with open(self.get_path("task.json")) as f:
             tasks_json = json.load(f)
         tasks_json["config"]["pauseConfig"] = config
-        with open(self.get_path("task.json", "w")) as f:
+        tasks_json["config"]["pauseConfigId"] = cid
+        with open(self.get_path("task.json"), "w") as f:
             json.dump(tasks_json, f)
 
     def remaining_days(self, deck, number_of_unseen_cards):
-        deck_config = self.getDeckConfig(deck)
+        with open(self.get_path("task.json")) as f:
+            tasks_json = json.load(f)
+        if deck in tasks_json["tasks"]:
+            deck_config_id = tasks_json["tasks"][deck]
+        else:
+            deck_config_id = self.collection().decks.config_dict_for_deck_id(self.collection().decks.id(deck))["id"]
+        deck_config = self.collection().decks.get_config(deck_config_id)
         new_cards = int(deck_config["new"]["perDay"])
         if new_cards == 0:
             return 0
@@ -205,26 +219,92 @@ class Todo:
             print(e, stat)
             # If deck is done, remove it from task list
             if stat["unseen"] == 0:
-               print("finished", e)
-               self.move_deck_to_completed(e)
-               return e
 
-    def runBackgroundCheck(self):
-        op = QueryOp(
-            # the active window (main window in this case)
+                # Enable the folowing deck
+                deck_index = tasks.index(e)
+                print(f"len {len(tasks)} index {deck_index+1}")
+                # Check that deck isn't the last in tasks
+                if len(tasks) > deck_index + 1:
+                    with open(self.get_path("task.json")) as f:
+                        config = json.load(f)
+                        did = int(config["tasks"][tasks[deck_index+1]])
+                    self.setDeckConfigId([tasks[deck_index+1]], did)
+                    # Move deck to completed
+                    self.move_deck_to_completed(e)
+                    self.successfully_moved_deck(e)
+                else:
+                    self.move_deck_to_completed(e)
+                    self.successfully_moved_deck(e)
+                return e
+        print("No done task")
+
+    def setDeckConfigId(self, decks, configId):
+        configId = int(configId)
+        for deck in decks:
+            if not deck in self.get_deck_names():
+                return False
+
+        collection = self.collection()
+
+        for deck in decks:
+            try:
+                did = str(collection.decks.id(deck))
+                deck_dict = aqt.mw.col.decks.decks[did]
+                deck_dict['conf'] = configId
+                collection.decks.save(deck_dict)
+            except:
+                return False
+
+        return True
+
+    def backgroundSave(self, *args):
+        # Not working
+        # To implement later ;)
+        print("\n Saving collection ...")
+        saving = QueryOp(
             parent=mw,
-            # the operation is passed the collection for convenience; you can
-            # ignore it if you wish
-            op=lambda col: self.checkIfTaskDone,
-            success=self.successfully_moved_deck(),
+            op=lambda col: self.collection().save(),
+            success=lambda col: print("Collection saved\n"),
         )
-        # if with_progress() is not called, no progress window will be shown.
-        # note: QueryOp.with_progress() was broken until Anki 2.1.50
-        op.run_in_background()
+        saving.run_in_background()
 
-    def successfully_moved_deck(deck) -> None:
+    def runBackgroundCheck(self, *args):
+        print("Checking if there are done tasks")
+        self.checkIfTaskDone()
+        # We accept several args because the callback give many args
+        op = QueryOp(
+            parent=mw,
+            op=lambda col: self.checkIfTaskDone,
+            success=lambda col: self.successfully_moved_deck,
+        )
+        #op.run_in_background()
+
+    pass
+
+    def successfully_moved_deck(self, deck) -> None:
         showInfo(f"Congratulation ! You'd learnt all cards in {deck}")
+
     def render_tasks(self, deck_list):
+        # display blank is there's no tasks
+        if len(deck_list) == 0:
+            # Open html div
+            final_HTML = """
+                                            <div class="todo">
+                                            <div class="column">
+                                            """
+            final_HTML += """<div class="element"><h3 class="decktitle">Time to add some tasks...</h3></div>
+            """
+            # Add style
+            with open(self.get_path("style.html")) as f:
+                final_HTML += f.read()
+                f.close()
+            # Close html div
+            final_HTML += """
+                                                </div>
+                                            </div>
+                                            """
+
+            return final_HTML
         completed = self.get_all_completed()
         if isinstance(deck_list[0], list):
             finals_HTML = []
@@ -233,16 +313,15 @@ class Todo:
 
                 stats = self.get_deck_stats(self.get_deck_names())  # self.get_deck_names())
                 final_HTML = """"""
-
                 # add progress bar library
                 with open(self.get_path("progressbarLibrary.html")) as f:
                     final_HTML += f.read()
 
                 # Open html div
                 final_HTML += """
-                        <div class="todo">
-                        <div class="column">
-                        """
+                                <div class="todo">
+                                <div class="column">
+                                """
 
                 with open(self.get_path("FirstElement.html")) as f:
                     base_element = f.read()
@@ -251,7 +330,7 @@ class Todo:
 
                     # Get element stats dict
                     element_stats = stats[e]
-                    # Todo estimation jours restants avec config du deck
+
                     # check element is the first task because it's different html
                     if e in completed:
                         pourcentage = 100
@@ -263,13 +342,15 @@ class Todo:
 
                     element_html = base_element
                     element_html = element_html.replace("DECKTITLE", self.collection().decks.basename(e))
-                    element_html = element_html.replace("REMAINING",
-                                                        str(self.remaining_days(e, element_stats["unseen"])))
                     element_html = element_html.replace("POURCENTAGEVALUE", f"{pourcentage}")
 
                     if tasks.index(e) == 0:
                         element_html = element_html.replace('class="example"', 'class="firstelementprogressbar"')
-
+                        element_html = element_html.replace("REMAINING",
+                                                            str(self.remaining_days(e, element_stats["unseen"]))+"remaining days")
+                    else:
+                        element_html = element_html.replace("REMAINING",
+                                                            str(self.remaining_days(e, element_stats["unseen"]))+" days estimated")
                     final_HTML += element_html
 
                 # Add style
@@ -278,9 +359,9 @@ class Todo:
                     f.close()
                 # Close html div
                 final_HTML += """
-                            </div>
-                        </div>
-                        """
+                                    </div>
+                                </div>
+                                """
 
                 finals_HTML.append(final_HTML)
 
@@ -298,9 +379,9 @@ class Todo:
 
             # Open html div
             final_HTML += """
-            <div class="todo">
-            <div class="column">
-            """
+                    <div class="todo">
+                    <div class="column">
+                    """
 
             with open(self.get_path("FirstElement.html")) as f:
                 base_element = f.read()
@@ -322,12 +403,17 @@ class Todo:
 
                 element_html = base_element
                 element_html = element_html.replace("DECKTITLE", self.collection().decks.basename(e))
-                element_html = element_html.replace("REMAINING", str(self.remaining_days(e, element_stats["unseen"])))
                 element_html = element_html.replace("POURCENTAGEVALUE", f"{pourcentage}")
 
                 if tasks.index(e) == 0:
                     element_html = element_html.replace('class="example"', 'class="firstelementprogressbar"')
-
+                    element_html = element_html.replace("REMAINING",
+                                                        str(self.remaining_days(e, element_stats[
+                                                            "unseen"])) + " days remaining")
+                else:
+                    element_html = element_html.replace("REMAINING",
+                                                        str(self.remaining_days(e, element_stats[
+                                                            "unseen"])) + " days estimated")
                 final_HTML += element_html
 
             # Add style
@@ -336,9 +422,9 @@ class Todo:
                 f.close()
             # Close html div
             final_HTML += """
-                </div>
-            </div>
-            """
+                        </div>
+                    </div>
+                    """
 
             return final_HTML
 
@@ -347,6 +433,7 @@ todo = Todo()
 
 
 def show_to_do_window():
+    pprint.pp(todo.collection().decks.get_config(1682080877248))
     mw.toDoWindows = toDoWindows = ToDoQtWindows(todo, mw)
     toDoWindows.show()
 
@@ -366,7 +453,8 @@ def register_webview():
     todo.collection().save()
     gui_hooks.webview_will_set_content.append(on_webview_will_set_content)
     # Add deck progression check to operation_did_execute hook
-    gui_hooks.operation_did_execute.append(todo.runBackgroundCheck())
+    gui_hooks.operation_did_execute.append(functools.partial(todo.backgroundSave))
+    gui_hooks.operation_did_execute.append(functools.partial(todo.runBackgroundCheck))
     # show_to_do_window()
 
 
