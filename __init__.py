@@ -10,21 +10,12 @@ from aqt import *
 from aqt.operations import QueryOp
 from aqt.utils import showInfo, showText
 from aqt.webview import WebContent
-
+import os
 # Append a path to sys.path in order to import element from other python files
 import sys
 
-# sys.path show a list of path, the first element of this list is the addons folder
-# todo get propser folder name
-print(sys.path)
-path = sys.path[0]
-platform = sys.platform
-# Check if platform is window
-if platform == "win32" :
-    sys.path.append(path + "\\1807500231\\")
-else:
-    sys.path.append(path + "/1807500231/")
-    print(sys.path)
+# add to path
+sys.path.insert(0, os.path.dirname(__file__))
 
 from ToDoQtWindows import ToDoQtWindows
 
