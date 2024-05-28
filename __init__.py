@@ -16,7 +16,7 @@ import sys
 
 # add to path
 sys.path.insert(0, os.path.dirname(__file__))
-
+print(sys.path)
 from ToDoQtWindows import ToDoQtWindows
 
 anki_version = tuple(int(segment) for segment in aqt.appVersion.split("."))
@@ -37,7 +37,7 @@ class Todo:
         return collection
 
     def get_path(self, name):
-        return sys.path[0] f"/{name}"
+        return sys.path[0]+f"/{name}"
 
     def get_deck_names(self):
         names_list = []
