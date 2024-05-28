@@ -20,7 +20,7 @@ print(sys.path)
 path = sys.path[0]
 platform = sys.platform
 # Check if platform is window
-if "win" in platform:
+if platform == "win32" :
     sys.path.append(path + "\\1807500231\\")
 else:
     sys.path.append(path + "/1807500231/")
