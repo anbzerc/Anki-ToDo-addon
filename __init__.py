@@ -37,10 +37,7 @@ class Todo:
         return collection
 
     def get_path(self, name):
-        if "win" in platform:
-            return self.get_addon_path() + f"\\{name}"
-        else:
-            return self.get_addon_path() + f"/{name}"
+        return sys.path[0] f"/{name}"
 
     def get_deck_names(self):
         names_list = []
