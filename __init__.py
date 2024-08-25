@@ -8,6 +8,7 @@ import anki.collection
 import aqt.overview
 from aqt import *
 from aqt.operations import QueryOp
+from aqt.overview import OverviewContent, Overview
 from aqt.utils import showInfo, showText
 from aqt.webview import WebContent
 import os
@@ -18,7 +19,7 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 print(sys.path)
 plugin_path = os.path.dirname(__file__)
-print("Path : ", plugin_path)
+print("Pathhh : ", plugin_path)
 from ToDoQtWindows import ToDoQtWindows
 
 anki_version = tuple(int(segment) for segment in aqt.appVersion.split("."))
@@ -428,27 +429,21 @@ def show_to_do_window():
     toDoWindows.show()
 
 
-def on_webview_will_set_content(web_content, context):
-    # Vérifier si le contexte est la page d'accueil
-    body = web_content.body
-    splited = body.split("<center>")
-    # Ajouter du HTML personnalisé avant la balise de fermeture </body>
-    if len(splited) > 1:
-        web_content.body = body.split("<center>")[0] + "<center>" + todo.render_tasks(todo.get_all_task()) + \
-                           body.split("<center>")[1]
 
-
+def on_deck_browser_will_render_content(deck_browser, content):
+        custom = todo.render_tasks(todo.get_all_task())
+        content.stats += custom
 def register_webview():
-    # Save collection to prevent problems
-    todo.collection().save()
-    gui_hooks.webview_will_set_content.append(on_webview_will_set_content)
+
+    gui_hooks.deck_browser_will_render_content.append(on_deck_browser_will_render_content)
+    mw.deckBrowser.refresh()
     # Add deck progression check to operation_did_execute hook
     gui_hooks.operation_did_execute.append(functools.partial(todo.backgroundSave))
     gui_hooks.operation_did_execute.append(functools.partial(todo.runBackgroundCheck))
     # show_to_do_window()
 
 
-gui_hooks.main_window_did_init.append(register_webview)
+gui_hooks.profile_did_open.append(register_webview)
 
 # create a new menu item, "test"
 action = QAction("Todo", mw)
